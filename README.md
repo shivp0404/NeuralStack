@@ -28,6 +28,11 @@ NeuralStack/
 ```
 
 ---
+## Demo 
+Watch a quick demo:  
+[Click here to view the video on Google Drive](https://drive.google.com/file/d/1bGJijwufYUFcu5FgPL2so-_I52ylZBOE/view?usp=sharing) <!-- Replace with your actual Drive link -->
+
+---
 
 ## 🚦 Getting Started
 
