@@ -1,10 +1,12 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const { generateAccessToken, generateRefreshToken } = require('../utils/token');
+const {redisClient} = require('../utils/redisClient')
 
 // REGISTER
 exports.register = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password} = req.body;
+
   try {
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ message: 'Email already exists' });
@@ -19,9 +21,76 @@ exports.register = async (req, res) => {
   }
 };
 
+
+exports.me = async (req, res) => {
+  try {
+    // req.user is set by your verifyUser middleware
+    
+    const userId = req.userId;
+
+    const cachedUser = await redisClient.get(`user:${userId}`);
+    if (cachedUser) {
+      console.log("➡️ Returning from Redis");
+      return res.json(JSON.parse(cachedUser));
+    }
+
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+      const safeUser = { 
+      username: user.username,
+    };
+
+    await redisClient.setEx(`user:${userId}`, 3600, JSON.stringify(safeUser));
+
+    res.json(safeUser);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 // LOGIN
+// exports.login = async (req, res) => {
+//   const { email, password } = req.body;
+
+//   try {
+//     const user = await User.findOne({ email });
+//     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+
+//     const valid = await bcrypt.compare(password, user.passwordHash);
+//     if (!valid) return res.status(400).json({ message: 'Invalid credentials' });
+
+//     const accessToken = generateAccessToken(user._id);
+//     const refreshToken = generateRefreshToken(user._id);
+
+//     // Set both tokens as httpOnly cookies
+//     res.cookie('accessToken', accessToken, {
+//       httpOnly: true,
+//       maxAge: 15 * 60 * 1000,
+//       sameSite: 'Strict',
+//       secure: process.env.NODE_ENV === 'production'
+//     });
+
+//     res.cookie('refreshToken', refreshToken, {
+//       httpOnly: true,
+//       maxAge: 7 * 24 * 60 * 60 * 1000,
+//       sameSite: 'Strict',
+//       secure: process.env.NODE_ENV === 'production'
+//     });
+
+//     res.status(200).json({ message: 'Login successful' });
+//   } catch (err) {
+//     res.status(500).json({ message: 'Server error', error: err.message });
+//   }
+// };
+
 exports.login = async (req, res) => {
   const { email, password } = req.body;
+
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
@@ -32,14 +101,7 @@ exports.login = async (req, res) => {
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
-    // Set both tokens as httpOnly cookies
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      maxAge: 15 * 60 * 1000,
-      sameSite: 'Strict',
-      secure: process.env.NODE_ENV === 'production'
-    });
-
+    // ✅ Only store refresh token in httpOnly cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       maxAge: 7 * 24 * 60 * 60 * 1000,
@@ -47,11 +109,16 @@ exports.login = async (req, res) => {
       secure: process.env.NODE_ENV === 'production'
     });
 
-    res.status(200).json({ message: 'Login successful' });
+    // ✅ Send access token in response (frontend keeps it in memory)
+    res.status(200).json({
+      message: 'Login successful',
+      accessToken
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 // LOGOUT
 exports.logout = (req, res) => {

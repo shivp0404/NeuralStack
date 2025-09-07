@@ -1,10 +1,11 @@
 const Journal = require('../models/Journal');
 
+// Add or update entry
 exports.addEntry = async (req, res) => {
   const { date, learned, built, confused } = req.body;
   try {
     const entry = await Journal.findOneAndUpdate(
-      { user: req.userId, date },
+      { user: req.userId, date: new Date(date) }, // ensure Date type
       { learned, built, confused },
       { upsert: true, new: true }
     );
@@ -14,15 +15,21 @@ exports.addEntry = async (req, res) => {
   }
 };
 
+// Get specific entry by date
 exports.getEntry = async (req, res) => {
   try {
-    const entry = await Journal.findOne({ user: req.userId, date: req.query.date });
+    const { date } = req.query; // expects ?date=YYYY-MM-DD
+    const entry = await Journal.findOne({
+      user: req.userId,
+      date: new Date(date),
+    });
     res.json(entry || {});
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch entry', error: err.message });
   }
 };
 
+// Get all entries (sorted by latest date first)
 exports.getAllEntries = async (req, res) => {
   try {
     const entries = await Journal.find({ user: req.userId }).sort({ date: -1 });

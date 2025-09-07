@@ -5,9 +5,10 @@ const verifyUser = require('../middlewares/verifyUser');
 
 router.use(verifyUser);
 
+router.get('/history',revisionController.getRevisionHistory)
 router.get('/queue', revisionController.getRevisionQueue);
 router.post('/schedule', revisionController.scheduleRevision);
-router.put('/mark-reviewed', revisionController.markReviewed);
+router.patch('/mark-reviewed', revisionController.markReviewed);
 router.put('/snooze/:id', revisionController.snoozeRevision);
 
 module.exports = router;

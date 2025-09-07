@@ -42,8 +42,9 @@ exports.getHeatmapData = async (req, res) => {
       },
       { $sort: { _id: 1 } }
     ]);
-
+    
     res.json(snippets);
+
   } catch (err) {
     res.status(500).json({ message: 'Failed to get heatmap', error: err.message });
   }

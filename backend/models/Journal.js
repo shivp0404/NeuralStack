@@ -7,7 +7,7 @@ const JournalSchema = new mongoose.Schema({
     required: true
   },
   date: {
-    type: String, // "YYYY-MM-DD"
+    type: Date, // "YYYY-MM-DD"
     required: true
   },
   learned: String,
